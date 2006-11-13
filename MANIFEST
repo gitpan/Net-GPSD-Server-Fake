@@ -1,0 +1,9 @@
+CHANGES
+LICENSE
+Makefile.PL
+MANIFEST
+META.yml
+README
+t/base.t
+bin/example-server
+lib/Net/GPSD/Server/Fake.pm
