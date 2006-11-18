@@ -5,5 +5,9 @@ MANIFEST
 META.yml
 README
 t/base.t
-bin/example-server
+bin/example-circle
+bin/example-track
+bin/example-stationary
 lib/Net/GPSD/Server/Fake.pm
+lib/Net/GPSD/Server/Fake/Track.pm
+lib/Net/GPSD/Server/Fake/Stationary.pm

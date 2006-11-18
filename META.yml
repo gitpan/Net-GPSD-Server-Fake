@@ -1,11 +1,13 @@
-name:                Net-GPSD-Server-Fake
-version:             0.02
-version_from:        lib/Net/GPSD/Server/Fake.pm
-abstract:            Provides a Fake GPSD Daemon for watcher mode clients
-license:             perl
-distribution_type:   module
-requires:     
-    vars:                          0
+# http://module-build.sourceforge.net/META-spec.html
+#XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
+name:         Net-GPSD-Server-Fake
+version:      0.03
+version_from: lib/Net/GPSD/Server/Fake.pm
+installdirs:  site
+requires:
+    IO::Socket:                    0
     strict:                        0
-    IO::Socket::INET:              0
-    Geo::Forward:                  0.06
+    vars:                          0
+
+distribution_type: module
+generated_by: ExtUtils::MakeMaker version 6.25

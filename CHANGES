@@ -1,5 +1,8 @@
 Revision history for Net::GPSD::Server::Fake
 
+2006-11-17 v0.03
+  * separated the algorithms from the daemon.
+  * new interface! See examples.
 2006-11-17 v0.02
   * watcher mode now starts and stops
   * documentation
