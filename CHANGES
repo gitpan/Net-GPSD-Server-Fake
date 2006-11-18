@@ -1,4 +1,7 @@
 Revision history for Net::GPSD::Server::Fake
 
+2006-11-17 v0.02
+  * watcher mode now starts and stops
+  * documentation
 2006-11-12 v0.01
   * Original Version

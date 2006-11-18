@@ -8,7 +8,7 @@ use strict;
 use vars qw($VERSION);
 use IO::Socket::INET;
 
-$VERSION = sprintf("%d.%02d", q{Revision: 0.01} =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%02d", q{Revision: 0.02} =~ /(\d+)\.(\d+)/);
 
 sub new {
   my $this = shift();
@@ -22,9 +22,8 @@ sub new {
 sub initialize {
   my $self = shift();
   my %param = @_;
-  $self->host($param{'host'}         || 'localhost');
   $self->port($param{'port'}         || '2947');
-  $self->protocol($param{'protocol'} || 'GPSD');
+  $self->name($param{'name'} || 'GPSD');
 }
 
 sub start {
@@ -49,19 +48,45 @@ sub start {
       $listen_socket->close; #only parent needs listening socket
       my $chars="";
       my $w=0;
-      my $protocol=$self->protocol;
+      my $watcher_pid=undef();
+      my $name=$self->name;
       while (my $data=$connection->getline) {
         next unless $data=~/\S/;       # blank line
-        if    ($data=~m/l/i)    { print $connection "$protocol,L=0 0.01 lw\n"; }
-        elsif ($data=~m/w/i)    { $w=$w?0:1;
-                          print $connection "$protocol,W=$w\n";
-                          $self->watcher($connection, $w);}
-        else            {}
+        if    ($data=~m/l/i) {
+          print $connection "$name,L=0 $VERSION lw Net-GPSD-Server-Fake\n";
+        } elsif ($data=~m/w/i) {
+          $w=$w?0:1;
+          print $connection "$name,W=$w\n";
+          if ($w) {
+            $watcher_pid=$self->start_watcher($connection);
+          } else {
+            $self->stop_watcher($watcher_pid);
+          }
+        } else {
+        }
       }
     } else { #i'm the parent
       $connection->close();
     }
   }
+}
+
+sub start_watcher {
+  my $self=shift();
+  my $fh=shift();
+  my $pid=fork();
+  die("Error: Cannot fork.") unless defined $pid;
+  if ($pid) {
+    return $pid;
+  } else {
+    $self->watcher($fh);
+  }
+}
+
+sub stop_watcher {
+  my $self=shift();
+  my $pid=shift();
+  kill "HUP", $pid;
 }
 
 sub watcher {
@@ -85,16 +110,16 @@ sub watcher {
       ($lat,$lon,$faz) = $object->forward($lat,$lon,$faz,$dist);
       $faz-=180;
     }
-    print $fh $self->protocol,",O=FAKE $time 0.005 $lat $lon ? ? ? $faz $speed 0 ? ? ? 2\n";
+    print $fh $self->name,",O=FAKE $time 0.005 $lat $lon ? ? ? $faz $speed 0 ? ? ? 2\n";
     $lasttime=$time;
     sleep 1;
   }
 }
 
-sub protocol {
+sub name {
   my $self = shift();
-  if (@_) { $self->{'protocol'} = shift() } #sets value
-  return $self->{'protocol'};
+  if (@_) { $self->{'name'} = shift() } #sets value
+  return $self->{'name'};
 }
 
 sub lat {
@@ -127,12 +152,6 @@ sub port {
   return $self->{'port'};
 }
 
-sub host {
-  my $self = shift();
-  if (@_) { $self->{'host'} = shift() } #sets value
-  return $self->{'host'};
-}
-
 1;
 __END__
 
@@ -140,13 +159,18 @@ __END__
 
 =head1 NAME
 
-Net::GPSD::Server::Fake - Provides a perl interface to the gpsd daemon. 
+Net::GPSD::Server::Fake - Provides a Fake GPSD test harness. 
 
 =head1 SYNOPSIS
 
  use Net::GPSD::Server::Fake;
- $server=new Net::GPSD::Server::Fake;
- $server->listen;
+ my $port=shift()||q{2947};
+ my $server=Net::GPSD::Server::Fake->new(port=>$port)
+               || die("Error: Cannot create server object.");
+ $server->start(lat=>38.865826,
+                lon=>-77.108574,
+                speed=>25,
+                heading=>45.3);
 
 =head1 DESCRIPTION
 
@@ -158,15 +182,13 @@ Net::GPSD::Server::Fake - Provides a perl interface to the gpsd daemon.
 
 Returns a new server
 
-=item host
-
-Get or set the current gpsd host.
-
 =back
 
 =head1 GETTING STARTED
 
 =head1 KNOWN LIMITATIONS
+
+Only knows l and w commands
 
 =head1 BUGS
 

@@ -20,13 +20,12 @@ BEGIN {
     }
 }
 
-BEGIN { plan tests => 5 }
+BEGIN { plan tests => 4 }
 
 # just check that all modules can be compiled
 ok(eval {require Net::GPSD::Server::Fake; 1}, 1, $@);
 
 my $server = Net::GPSD::Server::Fake->new();
 ok(ref $server, "Net::GPSD::Server::Fake");
-ok($server->host, "localhost");
 ok($server->port, "2947");
-ok($server->protocol, "GPSD");
+ok($server->name, "GPSD");

@@ -11,11 +11,12 @@ use lib q{../lib};
 use lib q{./lib};
 use Net::GPSD::Server::Fake;
 
-my ($host,$port)=split(q{:}, shift()||'');
-$host||=q{localhost};
-$port||=q{2947};
+my $port=shift()||q{2947};
 
-my $server=Net::GPSD::Server::Fake->new(host=>$host, port=>$port)
+my $server=Net::GPSD::Server::Fake->new(port=>$port)
                || die("Error: Cannot create server object.");
 
-$server->start(lat=>38.865826,lon=>-77.108574,speed=>25,heading=>45.3);
+$server->start(lat=>38.865826,
+               lon=>-77.108574,
+               speed=>25,
+               heading=>45.3);
