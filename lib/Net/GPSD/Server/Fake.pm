@@ -8,7 +8,7 @@ use strict;
 use vars qw($VERSION);
 use IO::Socket::INET;
 
-$VERSION = sprintf("%d.%02d", q{Revision: 0.04} =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%02d", q{Revision: 0.05} =~ /(\d+)\.(\d+)/);
 
 sub new {
   my $this = shift();
@@ -146,7 +146,7 @@ __END__
 
 =head1 NAME
 
-Net::GPSD::Server::Fake - Provides a Fake GPSD test harness. 
+Net::GPSD::Server::Fake - Provides a Fake GPSD daemon server test harness. 
 
 =head1 SYNOPSIS
 
@@ -186,8 +186,11 @@ Binds provider to port and starts server.
 =head1 KNOWN LIMITATIONS
 
 Only knows L and W commands
+
 Can't change providers mid stream.
+
 Providers must remember state for watcher restarts.
+
 Providers are queryed for a new point.  However, there needs to be a way for providers to be able to trigger new points.
 
 =head1 BUGS

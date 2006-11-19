@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-example-circle - Net::GPSD::Server::Fake example with stationary producer
+example-stationary - Net::GPSD::Server::Fake example with stationary producer
 
 =cut
 

@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-example-circle - Net::GPSD::Server::Fake example with linear producer
+example-track - Net::GPSD::Server::Fake example with linear producer
 
 =cut
 
@@ -18,7 +18,7 @@ my $server=Net::GPSD::Server::Fake->new(port=>$port)
 
 my $track=Net::GPSD::Server::Fake::Track->new(lat=>38.865826,
                                               lon=>-77.108574,
-                                              speed=>25,
+                                              speed=>2500,
                                               heading=>45.3);
 
 $server->start($track);

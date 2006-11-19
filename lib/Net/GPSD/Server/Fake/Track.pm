@@ -38,6 +38,7 @@ sub get {
   my $lat;
   my $lon;
   my $faz;
+  my $baz;
   my $speed;
   my $lasttime;
   if (ref($pt0) eq "Net::GPSD::Point") {
@@ -55,8 +56,8 @@ sub get {
   }
   if (defined $lasttime) {
     my $dist=$speed * ($lasttime-$time);
-    ($lat,$lon,$faz) = $object->forward($lat,$lon,$faz,$dist);
-    $faz-=180;
+    ($lat,$lon,$baz) = $object->forward($lat,$lon,$faz,$dist);
+    $faz=$baz-180;
   }
   my $point=Net::GPSD::Point->new();
   $point->tag(ref($self));
@@ -107,7 +108,7 @@ __END__
 
 =head1 NAME
 
-Net::GPSD::Server::Fake::Stationary - Provides a linear feed for the GPSD Daemon.
+Net::GPSD::Server::Fake::Track - Provides a linear feed for the GPSD Daemon.
 
 =head1 SYNOPSIS
 
