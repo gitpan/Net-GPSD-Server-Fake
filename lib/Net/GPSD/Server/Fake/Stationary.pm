@@ -7,7 +7,7 @@ package Net::GPSD::Server::Fake::Stationary;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = sprintf("%d.%02d", q{Revision: 0.02} =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%02d", q{Revision: 0.03} =~ /(\d+)\.(\d+)/);
 
 sub new {
   my $this = shift();
@@ -27,7 +27,7 @@ sub initialize {
   $self->heading($param{'heading'}   ||  0);
 }
 
-sub point {
+sub get {
   my $self=shift();
   my $time=shift();
   my $pt0=shift();
@@ -44,8 +44,9 @@ sub point {
   return $point;
 }
 
-sub satellite {
-  return undef();
+sub getsatellitelist {
+  use Net::GPSD::Satellite;
+  return (Net::GPSD::Satellite->new(split " ", "0 1 2 3 4"));
 }
 
 sub lat {
@@ -79,18 +80,16 @@ __END__
 
 =head1 NAME
 
-Net::GPSD::Server::Fake - Provides a Fake GPSD test harness. 
+Net::GPSD::Server::Fake::Stationary - Provides a stationery feed for the GPSD Daemon. 
 
 =head1 SYNOPSIS
 
  use Net::GPSD::Server::Fake;
- my $port=shift()||q{2947};
- my $server=Net::GPSD::Server::Fake->new(port=>$port)
-               || die("Error: Cannot create server object.");
- $server->start(lat=>38.865826,
-                lon=>-77.108574,
-                speed=>25,
-                heading=>45.3);
+ use Net::GPSD::Server::Fake::Stationary;
+ my $server=Net::GPSD::Server::Fake->new();
+ my $stationary=Net::GPSD::Server::Fake::Stationary->new(lat=>38.865826,
+                                                         lon=>-77.108574);
+ $server->start($stationary);
 
 =head1 DESCRIPTION
 
@@ -100,7 +99,15 @@ Net::GPSD::Server::Fake - Provides a Fake GPSD test harness.
 
 =item new
 
-Returns a new server
+Returns a new provider that can be passed to Net::GPSD::Server::Fake.
+
+=item get
+
+Returns a Net::GPSD::Point object
+
+=item getsatellitelist
+
+Returns a list of Net::GPSD::Satellite objects
 
 =back
 
@@ -121,5 +128,6 @@ Michael R. Davis, qw/gpsd michaelrdavis com/
 =head1 SEE ALSO
 
 gpsd home http://gpsd.berlios.de/
+Net::GPSD
 
 =cut

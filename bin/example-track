@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-example-server - Net::GPSD::Server::Fake example
+example-circle - Net::GPSD::Server::Fake example with linear producer
 
 =cut
 
@@ -12,7 +12,8 @@ use lib q{./lib};
 use Net::GPSD::Server::Fake;
 use Net::GPSD::Server::Fake::Track;
 
-my $server=Net::GPSD::Server::Fake->new(port=>2947)
+my $port=shift()||2947;
+my $server=Net::GPSD::Server::Fake->new(port=>$port)
                || die("Error: Cannot create server object.");
 
 my $track=Net::GPSD::Server::Fake::Track->new(lat=>38.865826,

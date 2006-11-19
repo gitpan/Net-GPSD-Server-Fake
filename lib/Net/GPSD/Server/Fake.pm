@@ -8,7 +8,7 @@ use strict;
 use vars qw($VERSION);
 use IO::Socket::INET;
 
-$VERSION = sprintf("%d.%02d", q{Revision: 0.03} =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%02d", q{Revision: 0.04} =~ /(\d+)\.(\d+)/);
 
 sub new {
   my $this = shift();
@@ -92,12 +92,12 @@ sub watcher {
   my $fh=shift();
   my $provider=shift();
   my $point=undef();
-  my $satellite=undef();
+  my @satellite=();
   my $count=0;
 
   while (1) {
     my $time=time;
-    $point=$provider->point($time, $point);
+    $point=$provider->get($time, $point);
     if (ref($point) eq "Net::GPSD::Point") {
     print $fh $self->name,",O=", 
       join(" ", $point->tag||"FAKE", $point->time||$time,
@@ -108,12 +108,15 @@ sub watcher {
                 u2q($point->errorheading), u2q($point->errorspeed),
                 u2q($point->errorclimb), u2q($point->mode)), "\n";
     } else {
-      die("Error: provider->point must return Net::GPSD::Point not ". ref($point).".\n");
+      die("Error: provider->get must return Net::GPSD::Point not ". ref($point).".\n");
     }
     if ($count++ % 5 == 0) {
-      $satellite=$provider->satellite();
-      if (ref($satellite) eq "Net::GPSD::Satellite") {
-        print ref($satellite), "\n";
+      @satellite=$provider->getsatellitelist();
+      if (ref($satellite[0]) eq "Net::GPSD::Satellite") {
+        print $fh $self->name,",Y=",
+          join(" ", "FAKE",time,scalar(@satellite)),":",
+          join(":", map {$_->prn, $_->elev, $_->azim, $_->snr,
+                         $_->used} @satellite), "\n";
       }
     }
     sleep 1;
@@ -124,30 +127,6 @@ sub name {
   my $self = shift();
   if (@_) { $self->{'name'} = shift() } #sets value
   return $self->{'name'};
-}
-
-sub lat {
-  my $self = shift();
-  if (@_) { $self->{'lat'} = shift() } #sets value
-  return $self->{'lat'};
-}
-
-sub lon {
-  my $self = shift();
-  if (@_) { $self->{'lon'} = shift() } #sets value
-  return $self->{'lon'};
-}
-
-sub speed {
-  my $self = shift();
-  if (@_) { $self->{'speed'} = shift() } #sets value
-  return $self->{'speed'};
-}
-
-sub heading {
-  my $self = shift();
-  if (@_) { $self->{'heading'} = shift() } #sets value
-  return $self->{'heading'};
 }
 
 sub port {
@@ -172,13 +151,11 @@ Net::GPSD::Server::Fake - Provides a Fake GPSD test harness.
 =head1 SYNOPSIS
 
  use Net::GPSD::Server::Fake;
- my $port=shift()||q{2947};
- my $server=Net::GPSD::Server::Fake->new(port=>$port)
-               || die("Error: Cannot create server object.");
- $server->start(lat=>38.865826,
-                lon=>-77.108574,
-                speed=>25,
-                heading=>45.3);
+ use Net::GPSD::Server::Fake::Stationary;
+ my $server=Net::GPSD::Server::Fake->new();
+ my $stationary=Net::GPSD::Server::Fake::Stationary->new(lat=>38.865826,
+                                                         lon=>-77.108574);
+ $server->start($stationary);
 
 =head1 DESCRIPTION
 
@@ -190,13 +167,28 @@ Net::GPSD::Server::Fake - Provides a Fake GPSD test harness.
 
 Returns a new server
 
+=item port
+
+Gets or sets TCP port
+
+=item name
+
+Gets or sets GPSD protocol name. This defaults to "GPSD" as some clients are picky.
+
+=item start
+
+Binds provider to port and starts server.
+
 =back
 
 =head1 GETTING STARTED
 
 =head1 KNOWN LIMITATIONS
 
-Only knows l and w commands
+Only knows L and W commands
+Can't change providers mid stream.
+Providers must remember state for watcher restarts.
+Providers are queryed for a new point.  However, there needs to be a way for providers to be able to trigger new points.
 
 =head1 BUGS
 
