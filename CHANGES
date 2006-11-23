@@ -1,5 +1,7 @@
 Revision history for Net::GPSD::Server::Fake
 
+2006-11-23 v0.07
+  * Added circle provider to package really!
 2006-11-22 v0.06
   * Added circle provider to package
 2006-11-18 v0.05
