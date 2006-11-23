@@ -8,7 +8,7 @@ use strict;
 use vars qw($VERSION);
 use IO::Socket::INET;
 
-$VERSION = sprintf("%d.%02d", q{Revision: 0.05} =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%02d", q{Revision: 0.06} =~ /(\d+)\.(\d+)/);
 
 sub new {
   my $this = shift();

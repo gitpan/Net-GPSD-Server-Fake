@@ -34,7 +34,7 @@ sub get {
 
   use Net::GPSD::Point;
   my $point=Net::GPSD::Point->new();
-  $point->tag(ref($self));
+  $point->tag("FAKE");
   $point->lat($self->lat);
   $point->lon($self->lon);
   $point->speed(0);
@@ -114,8 +114,6 @@ Returns a list of Net::GPSD::Satellite objects
 =head1 GETTING STARTED
 
 =head1 KNOWN LIMITATIONS
-
-Only knows l and w commands
 
 =head1 BUGS
 

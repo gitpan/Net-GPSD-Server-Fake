@@ -60,7 +60,7 @@ sub get {
     $faz=$baz-180;
   }
   my $point=Net::GPSD::Point->new();
-  $point->tag(ref($self));
+  $point->tag("FAKE");
   $point->time($time);
   $point->errortime(0.001);
   $point->lat($lat);
@@ -144,8 +144,6 @@ Returns a list of Net::GPSD::Satellite objects
 =head1 GETTING STARTED
 
 =head1 KNOWN LIMITATIONS
-
-Only knows l and w commands
 
 =head1 BUGS
 

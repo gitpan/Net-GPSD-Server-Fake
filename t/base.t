@@ -10,6 +10,18 @@ use strict;
 use lib q{lib};
 use lib q{../lib};
 
+sub near {
+  my $x=shift();
+  my $y=shift();
+  my $p=shift()||7;
+  if (($x-$y)/$y < 10**-$p) {
+    return 1;
+  } else {
+    return 0;
+  }
+}
+
+
 BEGIN {
     if (!eval q{
 	use Test;
@@ -20,7 +32,7 @@ BEGIN {
     }
 }
 
-BEGIN { plan tests => 29 }
+BEGIN { plan tests => 38 }
 
 # just check that all modules can be compiled
 ok(eval {require Net::GPSD::Server::Fake; 1}, 1, $@);
@@ -67,3 +79,25 @@ ok($s2->elev, 1);
 ok($s2->azim, 2);
 ok($s2->snr, 3);
 ok($s2->used, 4);
+
+ok(eval {require Net::GPSD::Server::Fake::Circle; 1}, 1, $@);
+my $circle = Net::GPSD::Server::Fake::Circle->new(lat=>38,
+                                                  lon=>-78,
+                                                  distance=>1000,
+                                                  speed=>22.2,
+                                                  heading=>33.3,
+                                                  alpha=>44.4);
+ok(ref $circle, "Net::GPSD::Server::Fake::Circle");
+my $p3=$circle->get();
+ok(ref $p3, "Net::GPSD::Point");
+near($p3->lat, 38.0064366217834);
+near($p3->lon, -77.9920334180003);
+
+my @s3=$circle->getsatellitelist();
+my $s3=$s3[0];
+ok(ref $s3, "Net::GPSD::Satellite");
+ok($s3->prn, 0);
+ok($s3->elev, 1);
+ok($s3->azim, 2);
+ok($s3->snr, 3);
+ok($s3->used, 4);
