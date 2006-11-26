@@ -5,9 +5,11 @@ WriteMakefile(
   PREREQ_PM => {
                  strict             => 0,
                  vars               => 0,
+                 constant           => 0,
                  IO::Socket::INET   => 0,
-                 Geo::Forward       => 0.06,
                  Time::HiRes        => 0,
+                 Geo::Forward       => 0.06,
+                 Net::GPSD::Point   => 0.25,
                },
                ($] >= 5.005 ? 
                  (
