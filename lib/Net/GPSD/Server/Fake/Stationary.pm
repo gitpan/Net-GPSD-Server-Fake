@@ -1,13 +1,38 @@
-#Copyright (c) 2006 Michael R. Davis (mrdvt92)
-#All rights reserved. This program is free software;
-#you can redistribute it and/or modify it under the same terms as Perl itself.
-
 package Net::GPSD::Server::Fake::Stationary;
+
+=pod
+
+=head1 NAME
+
+Net::GPSD::Server::Fake::Stationary - Provides a stationery feed for the GPSD Daemon. 
+
+=head1 SYNOPSIS
+
+  use Net::GPSD::Server::Fake;
+  use Net::GPSD::Server::Fake::Stationary;
+  my $server=Net::GPSD::Server::Fake->new();
+  my $stationary=Net::GPSD::Server::Fake::Stationary->new(lat=>38.865826,
+                                                          lon=>-77.108574);
+  $server->start($stationary);
+
+=head1 DESCRIPTION
+
+=cut
 
 use strict;
 use vars qw($VERSION);
 
-$VERSION = sprintf("%d.%02d", q{Revision: 0.03} =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%02d", q{Revision: 0.10} =~ /(\d+)\.(\d+)/);
+
+=head1 CONSTRUCTOR
+
+=head2 new
+
+Returns a new provider that can be passed to Net::GPSD::Server::Fake.
+
+  my $stationary=Net::GPSD::Server::Fake::Stationary->new();
+
+=cut
 
 sub new {
   my $this = shift();
@@ -18,6 +43,10 @@ sub new {
   return $self;
 }
 
+=head1 METHODS
+
+=cut
+
 sub initialize {
   my $self = shift();
   my %param = @_;
@@ -26,6 +55,14 @@ sub initialize {
   $self->speed($param{'speed'}       ||  0);
   $self->heading($param{'heading'}   ||  0);
 }
+
+=head2 get
+
+Returns a Net::GPSD::Point object
+
+  my $point=$obj->get;
+
+=cut
 
 sub get {
   my $self=shift();
@@ -43,6 +80,14 @@ sub get {
 
   return $point;
 }
+
+=head2 getsatellitelist
+
+Returns a list of Net::GPSD::Satellite objects
+
+  my @list=$obj->getsatellitelist;
+
+=cut
 
 sub getsatellitelist {
   use Net::GPSD::Satellite;
@@ -74,42 +119,8 @@ sub heading {
 }
 
 1;
+
 __END__
-
-=pod
-
-=head1 NAME
-
-Net::GPSD::Server::Fake::Stationary - Provides a stationery feed for the GPSD Daemon. 
-
-=head1 SYNOPSIS
-
- use Net::GPSD::Server::Fake;
- use Net::GPSD::Server::Fake::Stationary;
- my $server=Net::GPSD::Server::Fake->new();
- my $stationary=Net::GPSD::Server::Fake::Stationary->new(lat=>38.865826,
-                                                         lon=>-77.108574);
- $server->start($stationary);
-
-=head1 DESCRIPTION
-
-=head1 METHODS
-
-=over
-
-=item new
-
-Returns a new provider that can be passed to Net::GPSD::Server::Fake.
-
-=item get
-
-Returns a Net::GPSD::Point object
-
-=item getsatellitelist
-
-Returns a list of Net::GPSD::Satellite objects
-
-=back
 
 =head1 GETTING STARTED
 
@@ -123,9 +134,14 @@ Returns a list of Net::GPSD::Satellite objects
 
 Michael R. Davis, qw/gpsd michaelrdavis com/
 
+=head1 LICENSE
+
+Copyright (c) 2006 Michael R. Davis (mrdvt92)
+
+This library is free software; you can redistribute it and/or modify it under the same terms as Perl itself.
+
 =head1 SEE ALSO
 
-gpsd home http://gpsd.berlios.de/
 Net::GPSD
 
 =cut

@@ -1,14 +1,39 @@
-#Copyright (c) 2006 Michael R. Davis (mrdvt92)
-#All rights reserved. This program is free software;
-#you can redistribute it and/or modify it under the same terms as Perl itself.
-
 package Net::GPSD::Server::Fake;
+
+=pod
+
+=head1 NAME
+
+Net::GPSD::Server::Fake - Provides a Fake GPSD daemon server test harness. 
+
+=head1 SYNOPSIS
+
+ use Net::GPSD::Server::Fake;
+ use Net::GPSD::Server::Fake::Stationary;
+ my $server=Net::GPSD::Server::Fake->new();
+ my $stationary=Net::GPSD::Server::Fake::Stationary->new(lat=>38.865826,
+                                                         lon=>-77.108574);
+ $server->start($stationary);
+
+=head1 DESCRIPTION
+
+=head1 METHODS
+
+=cut
 
 use strict;
 use vars qw($VERSION);
 use IO::Socket::INET;
 
-$VERSION = sprintf("%d.%02d", q{Revision: 0.09} =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%02d", q{Revision: 0.10} =~ /(\d+)\.(\d+)/);
+
+=head2 new
+
+Returns a new server
+
+  my $server=Net::GPSD::Server::Fake->new();
+
+=cut
 
 sub new {
   my $this = shift();
@@ -22,9 +47,17 @@ sub new {
 sub initialize {
   my $self = shift();
   my %param = @_;
-  $self->port($param{'port'} || '2947');
+  $self->{'port'}=($param{'port'} || '2947');
   $self->name($param{'name'} || 'GPSD');
 }
+
+=head2 start
+
+Binds provider to port and starts server.
+
+ $server->start($provider);
+
+=cut
 
 sub start {
   my $self=shift();
@@ -123,15 +156,31 @@ sub watcher {
   }
 }
 
+=head2 name
+
+Gets or sets GPSD protocol name. This defaults to "GPSD" as some clients are picky.
+
+  $obj->name('GPSD');
+  my $name=$obj->name;
+
+=cut
+
 sub name {
   my $self = shift();
   if (@_) { $self->{'name'} = shift() } #sets value
   return $self->{'name'};
 }
 
+=head2 port
+
+Returns the current TCP port.
+
+  my $port=$obj->port;
+
+=cut
+
 sub port {
   my $self = shift();
-  if (@_) { $self->{'port'} = shift() } #sets value
   return $self->{'port'};
 }
 
@@ -139,47 +188,10 @@ sub u2q {
   my $value=shift();
   return (!defined($value)||($value eq "")) ? "?" : $value;
 }
+
 1;
+
 __END__
-
-=pod
-
-=head1 NAME
-
-Net::GPSD::Server::Fake - Provides a Fake GPSD daemon server test harness. 
-
-=head1 SYNOPSIS
-
- use Net::GPSD::Server::Fake;
- use Net::GPSD::Server::Fake::Stationary;
- my $server=Net::GPSD::Server::Fake->new();
- my $stationary=Net::GPSD::Server::Fake::Stationary->new(lat=>38.865826,
-                                                         lon=>-77.108574);
- $server->start($stationary);
-
-=head1 DESCRIPTION
-
-=head1 METHODS
-
-=over
-
-=item new
-
-Returns a new server
-
-=item port
-
-Gets or sets TCP port
-
-=item name
-
-Gets or sets GPSD protocol name. This defaults to "GPSD" as some clients are picky.
-
-=item start
-
-Binds provider to port and starts server.
-
-=back
 
 =head1 GETTING STARTED
 
@@ -200,6 +212,12 @@ Providers are queryed for a new point.  However, there needs to be a way for pro
 =head1 AUTHOR
 
 Michael R. Davis, qw/gpsd michaelrdavis com/
+
+=head1 LICENSE
+
+Copyright (c) 2006 Michael R. Davis (mrdvt92)
+
+This library is free software; you can redistribute it and/or modify it under the same terms as Perl itself.
 
 =head1 SEE ALSO
 

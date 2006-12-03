@@ -1,12 +1,12 @@
 # http://module-build.sourceforge.net/META-spec.html
 #XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
 name:         Net-GPSD-Server-Fake
-version:      0.09
+version:      0.10
 version_from: lib/Net/GPSD/Server/Fake.pm
 installdirs:  site
 requires:
-    constant:                      0
     Geo::Forward:                  0.06
+    Geo::Functions:                0.02
     IO::Socket::INET:              0
     Net::GPSD::Point:              0.25
     Net::GPSD::Satellite:          0.14

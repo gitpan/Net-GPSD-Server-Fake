@@ -1,14 +1,43 @@
-#Copyright (c) 2006 Michael R. Davis (mrdvt92)
-#All rights reserved. This program is free software;
-#you can redistribute it and/or modify it under the same terms as Perl itself.
-
 package Net::GPSD::Server::Fake::Circle;
+
+=pod
+
+=head1 NAME
+
+Net::GPSD::Server::Fake::Circle - Provides a linear feed for the GPSD Daemon.
+
+=head1 SYNOPSIS
+
+  use Net::GPSD::Server::Fake;
+  use Net::GPSD::Server::Fake::Circle;
+  my $server=Net::GPSD::Server::Fake->new();
+  my $circle=Net::GPSD::Server::Fake::Circle->new(lat=>38.865826,
+                                                  lon=>-77.108574,
+                                                  speed=>25,
+                                                  heading=>45.3,
+                                                  distance=>1000,
+                                                  alpha=>0);
+  $server->start($circle);
+
+=head1 DESCRIPTION
+
+=cut
 
 use strict;
 use vars qw($VERSION);
-use constant PI => 2 * atan2(1, 0);
+use Geo::Functions qw{deg_rad};
 
-$VERSION = sprintf("%d.%02d", q{Revision: 0.01} =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%02d", q{Revision: 0.10} =~ /(\d+)\.(\d+)/);
+
+=head1 CONSTRUCTOR
+
+=head2 new
+
+Returns a new provider that can be passed to Net::GPSD::Server::Fake.
+
+  my $circle=Net::GPSD::Server::Fake::Circle->new();
+
+=cut
 
 sub new {
   my $this = shift();
@@ -18,6 +47,10 @@ sub new {
   $self->initialize(@_);
   return $self;
 }
+
+=head1 METHODS
+
+=cut
 
 sub initialize {
   my $self = shift();
@@ -29,6 +62,14 @@ sub initialize {
   $self->distance($param{'distance'} ||  1000  ); #meters
   $self->alpha($param{'alpha'}       ||  0     ); #degrees
 }
+
+=head2 get
+
+Returns a Net::GPSD::Point object
+
+  my $point=$obj->get;
+
+=cut
 
 sub get {
   my $self=shift();
@@ -48,7 +89,7 @@ sub get {
 
   if (ref($pt0) eq "Net::GPSD::Point") {
     $lasttime=$pt0->time;
-    $da=($time-$lasttime)*$speed/$dist*180/PI;
+    $da=deg_rad(($time-$lasttime)*$speed/$dist);
     $alpha=$pt0->heading+90-$da;
   } else {
     $da=0;
@@ -71,6 +112,14 @@ sub get {
 
   return $point;
 }
+
+=head2 getsatellitelist
+
+Returns a list of Net::GPSD::Satellite objects
+
+  my @list=$obj->getsatellitelist;
+
+=cut
 
 sub getsatellitelist {
   use Net::GPSD::Satellite;
@@ -114,46 +163,8 @@ sub distance {
 }
 
 1;
+
 __END__
-
-=pod
-
-=head1 NAME
-
-Net::GPSD::Server::Fake::Circle - Provides a linear feed for the GPSD Daemon.
-
-=head1 SYNOPSIS
-
- use Net::GPSD::Server::Fake;
- use Net::GPSD::Server::Fake::Circle;
- my $server=Net::GPSD::Server::Fake->new();
- my $circle=Net::GPSD::Server::Fake::Circle->new(lat=>38.865826,
-                                               lon=>-77.108574,
-                                               speed=>25,
-                                               heading=>45.3,
-                                               distance=>1000,
-                                               alpha=>0);
- $server->start($circle);
-
-=head1 DESCRIPTION
-
-=head1 METHODS
-
-=over
-
-=item new
-
-Returns a new provider that can be passed to Net::GPSD::Server::Fake.
-
-=item get
-
-Returns a Net::GPSD::Point object
-
-=item getsatellitelist
-
-Returns a list of Net::GPSD::Satellite objects
-
-=back
 
 =head1 GETTING STARTED
 
@@ -167,8 +178,14 @@ Returns a list of Net::GPSD::Satellite objects
 
 Michael R. Davis, qw/gpsd michaelrdavis com/
 
+=head1 LICENSE
+
+Copyright (c) 2006 Michael R. Davis (mrdvt92)
+
+This library is free software; you can redistribute it and/or modify it under the same terms as Perl itself.
+
 =head1 SEE ALSO
 
-gpsd home http://gpsd.berlios.de/
+Net:GPSD
 
 =cut

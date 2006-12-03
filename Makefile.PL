@@ -5,9 +5,9 @@ WriteMakefile(
   PREREQ_PM => {
                  strict               => 0,
                  vars                 => 0,
-                 constant             => 0,
                  IO::Socket::INET     => 0,
                  Time::HiRes          => 0,
+                 Geo::Functions       => 0.02,
                  Geo::Forward         => 0.06,
                  Net::GPSD::Point     => 0.25,
                  Net::GPSD::Satellite => 0.14,
