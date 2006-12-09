@@ -25,7 +25,7 @@ use strict;
 use vars qw($VERSION);
 use IO::Socket::INET;
 
-$VERSION = sprintf("%d.%02d", q{Revision: 0.10} =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%02d", q{Revision: 0.11} =~ /(\d+)\.(\d+)/);
 
 =head2 new
 
@@ -79,10 +79,34 @@ sub start {
       my $w=0;
       my $watcher_pid=undef();
       my $name=$self->name;
+      print "Connected: ", $connection->sockhost, ":", $connection->sockport, " -> ", $connection->peerhost,":",$connection->peerport, "\n";
       while (defined($_=$connection->getline)) {
+        chomp;
+        print "Command: ", $connection->peerhost,":",$connection->peerport, " -> ",$_,"\n";
         next unless m/\S/;       # blank line
         if    (m/l/i) {
-          print $connection "$name,L=0 $VERSION lw ".ref($self)."\n";
+          print $connection "$name,L=0 $VERSION ailopwy ".ref($self)."\n";
+        } elsif (m/a/i) {
+          my $point=$provider->get();
+          print $connection "$name,A=", 
+                            u2q(defined($point) ? $point->alt : '?'),"\n";
+        } elsif (m/i/i) {
+          my $point=$provider->get();
+          print $connection "$name,I=", u2q(ref($provider)),"\n";
+        } elsif (m/m/i) {
+          my $point=$provider->get();
+          print $connection "$name,M=", 
+                            u2q(defined($point) ? $point->mode : '?'),"\n";
+        } elsif (m/p/i) {
+          my $point=$provider->get();
+          print $connection "$name,P=",join(" ", 
+                            u2q(defined($point) ? $point->lat : '?'),
+                            u2q(defined($point) ? $point->lon : '?')
+                            ), "\n";
+        } elsif (m/o/i) {
+          $self->print_o($provider, $connection);
+        } elsif (m/y/i) {
+          $self->print_y($provider, $connection);
         } elsif (m/w/i) {
           $w=$w?0:1;
           print $connection "$name,W=$w\n";
@@ -119,38 +143,53 @@ sub stop_watcher {
   kill "HUP", $pid;
 }
 
+sub print_o {
+  my $self=shift();
+  my $provider=shift();
+  my $fh=shift();
+  my $point=shift()||undef();
+  my $time=shift()||time();
+  $point=$provider->get($time, $point);
+  if (ref($point) eq "Net::GPSD::Point") {
+  print $fh $self->name,",O=",
+    join(" ", $point->tag||"FAKE", $point->time||$time,
+              $point->errortime||0.001, u2q($point->lat), u2q($point->lon),
+              u2q($point->alt), u2q($point->errorhorizontal),
+              u2q($point->errorvertical), u2q($point->heading),
+              u2q($point->speed), u2q($point->climb),
+              u2q($point->errorheading), u2q($point->errorspeed),
+              u2q($point->errorclimb), u2q($point->mode)), "\n";
+  } else {
+    die("Error: provider->get must return Net::GPSD::Point\n");
+  }
+}
+sub print_y {
+  my $self=shift();
+  my $provider=shift();
+  my $fh=shift();
+  my @satellite=$provider->getsatellitelist();
+  if (ref($satellite[0]) eq "Net::GPSD::Satellite") {
+    print $fh $self->name,",Y=",
+      join(" ", "FAKE",time,scalar(@satellite)),":",
+      join(":", map {$_->prn, $_->elev, $_->azim, $_->snr,
+                     $_->used} @satellite), "\n";
+  } else {
+    die("Error: provider->getsatellitelist must return a list of Net::GPSD::Satellite objects.\n");
+  }
+}
+
 sub watcher {
   use Time::HiRes qw{time};
   my $self=shift();
   my $fh=shift();
   my $provider=shift();
   my $point=undef();
-  my @satellite=();
   my $count=0;
 
   while (1) {
-    my $time=time;
-    $point=$provider->get($time, $point);
-    if (ref($point) eq "Net::GPSD::Point") {
-    print $fh $self->name,",O=", 
-      join(" ", $point->tag||"FAKE", $point->time||$time,
-                $point->errortime||0.001, u2q($point->lat), u2q($point->lon),
-                u2q($point->alt), u2q($point->errorhorizontal),
-                u2q($point->errorvertical), u2q($point->heading),
-                u2q($point->speed), u2q($point->climb),
-                u2q($point->errorheading), u2q($point->errorspeed),
-                u2q($point->errorclimb), u2q($point->mode)), "\n";
-    } else {
-      die("Error: provider->get must return Net::GPSD::Point not ". ref($point).".\n");
-    }
+    $self->print_o($provider, $fh, $point);
     if ($count++ % 5 == 0) {
-      @satellite=$provider->getsatellitelist();
-      if (ref($satellite[0]) eq "Net::GPSD::Satellite") {
-        print $fh $self->name,",Y=",
-          join(" ", "FAKE",time,scalar(@satellite)),":",
-          join(":", map {$_->prn, $_->elev, $_->azim, $_->snr,
-                         $_->used} @satellite), "\n";
-      }
+      $self->print_y($provider, $fh);
     }
     sleep 1;
   }
@@ -197,7 +236,9 @@ __END__
 
 =head1 KNOWN LIMITATIONS
 
-Only knows L and W commands
+Only knows a few commands
+
+Commands must be one per line.
 
 Can't change providers mid stream.
 

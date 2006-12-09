@@ -76,7 +76,8 @@ sub get {
   $point->lon($self->lon);
   $point->speed(0);
   $point->heading(0);
-  $point->mode(2);
+  $point->alt(54.34);
+  $point->mode(3);
 
   return $point;
 }
