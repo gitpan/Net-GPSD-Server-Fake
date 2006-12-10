@@ -17,15 +17,15 @@ Net::GPSD::Server::Fake - Provides a Fake GPSD daemon server test harness.
 
 =head1 DESCRIPTION
 
-=head1 METHODS
-
 =cut
 
 use strict;
 use vars qw($VERSION);
 use IO::Socket::INET;
 
-$VERSION = sprintf("%d.%02d", q{Revision: 0.11} =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%02d", q{Revision: 0.12} =~ /(\d+)\.(\d+)/);
+
+=head1 CONSTRUCTOR
 
 =head2 new
 
@@ -43,6 +43,10 @@ sub new {
   $self->initialize(@_);
   return $self;
 }
+
+=head1 METHODS
+
+=cut
 
 sub initialize {
   my $self = shift();
