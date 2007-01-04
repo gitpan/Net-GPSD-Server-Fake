@@ -7,8 +7,7 @@ example-circle - Net::GPSD::Server::Fake example with circle producer
 =cut
 
 use strict;
-use lib q{../lib};
-use lib q{./lib};
+use lib qw{./lib ../lib};
 use Net::GPSD::Server::Fake;
 use Net::GPSD::Server::Fake::Circle;
 

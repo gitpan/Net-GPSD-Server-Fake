@@ -23,7 +23,7 @@ use strict;
 use vars qw($VERSION);
 use IO::Socket::INET;
 
-$VERSION = sprintf("%d.%02d", q{Revision: 0.12} =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%02d", q{Revision: 0.13} =~ /(\d+)\.(\d+)/);
 
 =head1 CONSTRUCTOR
 
