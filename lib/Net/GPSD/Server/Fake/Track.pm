@@ -11,11 +11,11 @@ Net::GPSD::Server::Fake::Track - Provides a linear feed for the GPSD Daemon.
  use Net::GPSD::Server::Fake;
  use Net::GPSD::Server::Fake::Track;
  my $server=Net::GPSD::Server::Fake->new();
- my $track=Net::GPSD::Server::Fake::Track->new(lat=>38.865826,
+ my $provider=Net::GPSD::Server::Fake::Track->new(lat=>38.865826,
                                                lon=>-77.108574,
                                                speed=>25,
                                                heading=>45.3);
- $server->start($track);
+ $server->start($provider);
 
 =head1 DESCRIPTION
 
@@ -23,8 +23,11 @@ Net::GPSD::Server::Fake::Track - Provides a linear feed for the GPSD Daemon.
 
 use strict;
 use vars qw($VERSION);
+use GPS::SpaceTrack;
+use Geo::Forward;
+use Net::GPSD::Point;
 
-$VERSION = sprintf("%d.%02d", q{Revision: 0.10} =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%02d", q{Revision: 0.14} =~ /(\d+)\.(\d+)/);
 
 =head1 CONSTRUCTOR
 
@@ -32,7 +35,7 @@ $VERSION = sprintf("%d.%02d", q{Revision: 0.10} =~ /(\d+)\.(\d+)/);
 
 Returns a new provider that can be passed to Net::GPSD::Server::Fake.
 
- my $track=Net::GPSD::Server::Fake::Track->new();
+ my $provider=Net::GPSD::Server::Fake::Track->new();
 
 =cut
 
@@ -56,6 +59,24 @@ sub initialize {
   $self->lon($param{'lon'}           || -77.5);
   $self->speed($param{'speed'}       ||  20);
   $self->heading($param{'heading'}   ||  0);
+  #$self->alt($param{'alt'}           ||  0);
+  $self->tle($param{'tlefile'});
+}
+
+=head2 tle
+
+Method to set TLE file or retrieve the TLE object.
+
+=cut
+
+sub tle {
+  my $self=shift();
+  my $tlefile=shift();
+  if (defined($tlefile)) {
+    $self->{'tle'}=GPS::SpaceTrack->new(filename=>$tlefile)
+      || die("Error: Cannot create GPS::SpaceTrack object.");
+  }
+  return $self->{'tle'};
 }
 
 =head2 get
@@ -71,8 +92,6 @@ sub get {
   my $time=shift();
   my $pt0=shift();
 
-  use Geo::Forward;
-  use Net::GPSD::Point;
   my $object = Geo::Forward->new();
   my $lat;
   my $lon;
@@ -95,7 +114,8 @@ sub get {
   }
   if (defined $lasttime) {
     my $dist=$speed * ($lasttime-$time);
-    ($lat,$lon,$baz) = $object->forward($lat,$lon,$faz,$dist);
+    ($lat,$lon,$baz)=$object->forward($lat,$lon,$faz,$dist);
+    print "Heading: $faz\n";
     $faz=$baz-180;
   }
   my $point=Net::GPSD::Point->new();
@@ -115,13 +135,27 @@ sub get {
 
 Returns a list of Net::GPSD::Satellite objects
 
-  my @list=$obj->getsatellitelist;
+  my @list=$obj->getsatellitelist($point);
 
 =cut
 
 sub getsatellitelist {
-  use Net::GPSD::Satellite;
-  return (Net::GPSD::Satellite->new(split " ", "0 1 2 3 4"));
+  my $self=shift();
+  my $point=shift();
+  my $obj=$self->tle;
+  if (defined $obj) {
+    my $lat=$point->lat;
+    my $lon=$point->lon;
+    my $hae=$point->alt||0;
+    my $time=$point->time;
+    #print "Lat => $lat, Lon => $lon, HAE => $hae, Time => $time\n";
+    my @list=grep {$_->snr > 0} $obj->getsatellitelist({lat=>$lat, lon=>$lon,
+                                                        alt=>$hae, time=>$time});
+    pop @list until scalar(@list) <= 12;
+    return wantarray ? @list : \@list;
+  } else {
+    return undef();
+  }
 }
 
 sub lat {

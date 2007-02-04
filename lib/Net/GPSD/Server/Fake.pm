@@ -22,8 +22,10 @@ Net::GPSD::Server::Fake - Provides a Fake GPSD daemon server test harness.
 use strict;
 use vars qw($VERSION);
 use IO::Socket::INET;
+use Time::HiRes qw{time};
+use Geo::Functions qw{dm_deg};
 
-$VERSION = sprintf("%d.%02d", q{Revision: 0.13} =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%02d", q{Revision: 0.14} =~ /(\d+)\.(\d+)/);
 
 =head1 CONSTRUCTOR
 
@@ -81,51 +83,82 @@ sub start {
       $listen_socket->close; #only parent needs listening socket
       my $chars="";
       my $w=0;
-      my $watcher_pid=undef();
+      my $r=0;
+      my $pid_watcher=undef();
+      my $pid_rmode=undef();
       my $name=$self->name;
-      print "Connected: ", $connection->sockhost, ":", $connection->sockport, " -> ", $connection->peerhost,":",$connection->peerport, "\n";
+      my $point=undef();
+      my $sockhost=$connection->sockhost;
+      my $sockport=$connection->sockport;
+      my $peerhost=$connection->peerhost;
+      my $peerport=$connection->peerport;
+      print "Connected: ", $sockhost, ":", $sockport, " -> ", $peerhost,":",$peerport, "\n";
       while (defined($_=$connection->getline)) {
         chomp;
-        print "Command: ", $connection->peerhost,":",$connection->peerport, " -> ",$_,"\n";
+        print "Command: ", $connection->peerhost,":",$connection->peerport, " -> ",$_;
         next unless m/\S/;       # blank line
-        if    (m/l/i) {
-          print $connection "$name,L=0 $VERSION ailopwy ".ref($self)."\n";
-        } elsif (m/a/i) {
-          my $point=$provider->get();
-          print $connection "$name,A=", 
-                            u2q(defined($point) ? $point->alt : '?'),"\n";
-        } elsif (m/i/i) {
-          my $point=$provider->get();
-          print $connection "$name,I=", u2q(ref($provider)),"\n";
-        } elsif (m/m/i) {
-          my $point=$provider->get();
-          print $connection "$name,M=", 
-                            u2q(defined($point) ? $point->mode : '?'),"\n";
-        } elsif (m/p/i) {
-          my $point=$provider->get();
-          print $connection "$name,P=",join(" ", 
-                            u2q(defined($point) ? $point->lat : '?'),
-                            u2q(defined($point) ? $point->lon : '?')
-                            ), "\n";
-        } elsif (m/o/i) {
-          $self->print_o($provider, $connection);
-        } elsif (m/y/i) {
-          $self->print_y($provider, $connection);
-        } elsif (m/w/i) {
-          $w=$w?0:1;
-          print $connection "$name,W=$w\n";
-          if ($w) {
-            $watcher_pid=$self->start_watcher($connection,$provider);
+        my @output=($name);
+        $point=$provider->get(time, $point);
+        my @list=parseline($_);
+        foreach (@list) {
+          print " => $_";
+          if (m/l/i) {
+            push @output, "L=0 $VERSION ailopwxy ".ref($self);
+          } elsif (m/a/i) {
+            push @output, "A=".u2q(defined($point) ? $point->alt : '?');
+          } elsif (m/x/i) {
+            push @output, "X=". $point->time||0;
+          } elsif (m/i/i) {
+            push @output, "I=".u2q(ref($provider));
+          } elsif (m/m/i) {
+            push @output, "M=".u2q(defined($point) ? $point->mode : '?');
+          } elsif (m/p/i) {
+            push @output, "P=".join(" ", 
+                                 u2q(defined($point) ? $point->lat : '?'),
+                                 u2q(defined($point) ? $point->lon : '?')
+                               );
+          } elsif (m/o/i) {
+            push @output, $self->line_o($provider, $point);
+          } elsif (m/y/i) {
+            push @output, $self->line_y($provider, $point);
+          } elsif (m/w/i) {
+            $w=$w?0:1;
+            push @output, "W=$w";
+            if ($w) {
+              $pid_watcher=$self->start_watcher($connection, $provider);
+              print " => PID: $pid_watcher";
+            } else {
+              $self->stop_child($pid_watcher);
+            }
+          } elsif (m/r/i) {
+            $r=$r?0:1;
+            push @output, "R=$r";
+            if ($r) {
+              $pid_rmode=$self->start_rmode($connection, $provider);
+              print " => PID: $pid_rmode";
+            } else {
+              $self->stop_child($pid_rmode);
+            }
           } else {
-            $self->stop_watcher($watcher_pid);
           }
-        } else {
-        }
-      }
+        } #end of foreach
+        print $connection join(",", @output), "\n";
+        print "\n";
+      } #end of while
+      print "Disconnected: ", $sockhost, ":", $sockport, " -> ", $peerhost,":",$peerport, "\n";
     } else { #i'm the parent
       $connection->close();
     }
   }
+}
+
+sub parseline {
+  my $line=shift();
+  my @list=();
+  while ($line=~s/([a-z][^a-z]*)//i) {
+    push(@list, $1) if $1;  
+  }
+  return @list;
 }
 
 sub start_watcher {
@@ -141,49 +174,90 @@ sub start_watcher {
   }
 }
 
-sub stop_watcher {
+sub start_rmode {
+  my $self=shift();
+  my $fh=shift();
+  my $provider=shift();
+  my $pid=fork();
+  die("Error: Cannot fork.") unless defined $pid;
+  if ($pid) {
+    return $pid;
+  } else {
+    $self->rmode($fh, $provider);
+  }
+}
+
+sub stop_child {
   my $self=shift();
   my $pid=shift();
   kill "HUP", $pid;
 }
 
-sub print_o {
+sub line_o {
   my $self=shift();
   my $provider=shift();
-  my $fh=shift();
-  my $point=shift()||undef();
-  my $time=shift()||time();
-  $point=$provider->get($time, $point);
+  my $point=shift();
   if (ref($point) eq "Net::GPSD::Point") {
-  print $fh $self->name,",O=",
-    join(" ", $point->tag||"FAKE", $point->time||$time,
-              $point->errortime||0.001, u2q($point->lat), u2q($point->lon),
-              u2q($point->alt), u2q($point->errorhorizontal),
-              u2q($point->errorvertical), u2q($point->heading),
-              u2q($point->speed), u2q($point->climb),
-              u2q($point->errorheading), u2q($point->errorspeed),
-              u2q($point->errorclimb), u2q($point->mode)), "\n";
+    #print $fh $self->name,",O=",
+    return "O=".
+      join(" ", $point->tag||"FAKE", $point->time||time,
+                $point->errortime||0.001, u2q($point->lat), u2q($point->lon),
+                u2q($point->alt), u2q($point->errorhorizontal),
+                u2q($point->errorvertical), u2q($point->heading),
+                u2q($point->speed), u2q($point->climb),
+                u2q($point->errorheading), u2q($point->errorspeed),
+                u2q($point->errorclimb), u2q($point->mode));
   } else {
     die("Error: provider->get must return Net::GPSD::Point\n");
   }
 }
-sub print_y {
+
+sub line_y {
   my $self=shift();
   my $provider=shift();
-  my $fh=shift();
-  my @satellite=$provider->getsatellitelist();
+  my $point=shift();
+  my @satellite=$provider->getsatellitelist($point);
   if (ref($satellite[0]) eq "Net::GPSD::Satellite") {
-    print $fh $self->name,",Y=",
-      join(" ", "FAKE",time,scalar(@satellite)),":",
-      join(":", map {$_->prn, $_->elev, $_->azim, $_->snr,
-                     $_->used} @satellite), "\n";
+    #print $fh $self->name,",Y=",
+    return "Y=".
+      join(":", 
+                join(" ", "FAKE",$point->time, scalar(@satellite)),
+                map {join(" ", $_->prn, round($_->elev,1), round($_->azim,1),
+                               round($_->snr,1), $_->used)
+                    } @satellite);
   } else {
     die("Error: provider->getsatellitelist must return a list of Net::GPSD::Satellite objects.\n");
   }
 }
 
+sub line_rmc {
+  my $self=shift();
+  my $provider=shift();
+  my $point=shift();
+  my ($nd, $nm, $nsign)=dm_deg($point->lat, qw{N S});
+  my ($ed, $em, $esign)=dm_deg($point->lon, qw{E W});
+  
+  my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday) = gmtime($point->time);
+  my $line=sprintf("GPRMC,%02d%02d%02d,%s,%02d%07.4f,%s,%03d%07.4f,%s,%.4f,%.3f,%02d%02d%02d,,",
+                   $hour,
+                   $min,
+                   $sec,
+                   $point->fix ? 'A' : 'V', 
+                   $nd,
+                   $nm,
+                   $nsign,
+                   $ed,
+                   $em,
+                   $esign,
+                   $point->speed_knots,
+                   $point->heading,
+                   $mday,
+                   $mon + 1,
+                   $year % 100);
+  return join('', '$', $line, '*', checksum($line));
+}
+
 sub watcher {
-  use Time::HiRes qw{time};
   my $self=shift();
   my $fh=shift();
   my $provider=shift();
@@ -191,10 +265,28 @@ sub watcher {
   my $count=0;
 
   while (1) {
-    $self->print_o($provider, $fh, $point);
+    $point=$provider->get(time(), $point);
+    print $fh join(",", $self->name, $self->line_o($provider, $point)), "\n";
     if ($count++ % 5 == 0) {
-      $self->print_y($provider, $fh);
+      print $fh join(",", $self->name, $self->line_y($provider, $point)), "\n";
     }
+    sleep 1;
+  }
+}
+
+sub rmode {
+  my $self=shift();
+  my $fh=shift();
+  my $provider=shift();
+  my $point=undef();
+  my $count=0;
+
+  while (1) {
+    $point=$provider->get(time(), $point);
+    print $fh $self->line_rmc($provider, $point), "\n";
+#   if ($count++ % 5 == 0) {
+#     print $fh join(",", $self->name, $self->line_y($provider, $point)), "\n";
+#   }
     sleep 1;
   }
 }
@@ -232,11 +324,23 @@ sub u2q {
   return (!defined($value)||($value eq "")) ? "?" : $value;
 }
 
+sub round {
+  my $number=shift();
+  my $round=shift()||0.01;
+  return $round * int($number/$round);
+}
+
+sub checksum {
+  #${line}*{chk}
+  my $line=shift(); #GPRMC,053513,A,5331.6290,N,11331.8101,W,0.0000,0.000,150107,,
+  my $csum = 0;
+  $csum ^= unpack("C", $_) foreach (split("", $line));
+  return sprintf("%2.2X",$csum);
+}
+
 1;
 
 __END__
-
-=head1 GETTING STARTED
 
 =head1 KNOWN LIMITATIONS
 
@@ -252,7 +356,7 @@ Providers are queryed for a new point.  However, there needs to be a way for pro
 
 =head1 BUGS
 
-=head1 EXAMPLES
+Send issues to gpsd-dev email list
 
 =head1 AUTHOR
 
@@ -266,6 +370,6 @@ This library is free software; you can redistribute it and/or modify it under th
 
 =head1 SEE ALSO
 
-gpsd home http://gpsd.berlios.de/
+gpsd L<http://gpsd.berlios.de/>
 
 =cut

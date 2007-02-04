@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-example-stationary - Net::GPSD::Server::Fake example with stationary producer
+example-stationary.pl - Net::GPSD::Server::Fake example with stationary provider
 
 =cut
 
@@ -11,10 +11,19 @@ use lib qw{./lib ../lib};
 use Net::GPSD::Server::Fake;
 use Net::GPSD::Server::Fake::Stationary;
 
+my $filename="";
+$filename="../doc/gps.tle" if -r "../doc/gps.tle";
+$filename="./doc/gps.tle" if -r "./doc/gps.tle";
+$filename="./gps.tle" if -r "./gps.tle";
+$filename="../gps.tle" if -r "../gps.tle";
+$filename="../../gps.tle" if -r "../../gps.tle";
+
 my $port=shift()||2947;
 my $server=Net::GPSD::Server::Fake->new(port=>$port)
                || die("Error: Cannot create server object.");
 
-my $stationary=Net::GPSD::Server::Fake::Stationary->new(lat=>38.865826,
-                                                        lon=>-77.108574);
-$server->start($stationary);
+my $provider=Net::GPSD::Server::Fake::Stationary->new(lat=>38.865826,
+                                                      lon=>-77.108574,
+                                                      alt=>25,
+                                                      tlefile=>$filename);
+$server->start($provider);

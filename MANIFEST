@@ -1,7 +1,9 @@
 bin/example-circle.pl
+bin/example-stationary-gpsd.pl
 bin/example-stationary.pl
 bin/example-track.pl
 CHANGES
+doc/gps.tle
 doc/track-circle.png
 lib/Net/GPSD/Server/Fake.pm
 lib/Net/GPSD/Server/Fake/Circle.pm

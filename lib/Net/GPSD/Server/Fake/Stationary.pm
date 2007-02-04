@@ -11,9 +11,14 @@ Net::GPSD::Server::Fake::Stationary - Provides a stationery feed for the GPSD Da
   use Net::GPSD::Server::Fake;
   use Net::GPSD::Server::Fake::Stationary;
   my $server=Net::GPSD::Server::Fake->new();
-  my $stationary=Net::GPSD::Server::Fake::Stationary->new(lat=>38.865826,
-                                                          lon=>-77.108574);
-  $server->start($stationary);
+  my $provider =
+       Net::GPSD::Server::Fake::Stationary->new(lat=>38.865826,  #degrees
+                                                lon=>-77.108574, #degrees
+                                                speed=>25,       #m/s
+                                                heading=>90,     #degrees
+                                                alt=>50,         #meters
+                                                tlefile=>"./gps.tle");
+  $server->start($provider);
 
 =head1 DESCRIPTION
 
@@ -21,8 +26,9 @@ Net::GPSD::Server::Fake::Stationary - Provides a stationery feed for the GPSD Da
 
 use strict;
 use vars qw($VERSION);
+use GPS::SpaceTrack;
 
-$VERSION = sprintf("%d.%02d", q{Revision: 0.10} =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%02d", q{Revision: 0.14} =~ /(\d+)\.(\d+)/);
 
 =head1 CONSTRUCTOR
 
@@ -30,7 +36,7 @@ $VERSION = sprintf("%d.%02d", q{Revision: 0.10} =~ /(\d+)\.(\d+)/);
 
 Returns a new provider that can be passed to Net::GPSD::Server::Fake.
 
-  my $stationary=Net::GPSD::Server::Fake::Stationary->new();
+  my $provider=Net::GPSD::Server::Fake::Stationary->new();
 
 =cut
 
@@ -54,6 +60,24 @@ sub initialize {
   $self->lon($param{'lon'}           || -77.5);
   $self->speed($param{'speed'}       ||  0);
   $self->heading($param{'heading'}   ||  0);
+  $self->alt($param{'alt'}           ||  0);
+  $self->tle($param{'tlefile'});
+}
+
+=head2 tle
+
+Method to set TLE file or retrieve the TLE object.
+
+=cut
+
+sub tle {
+  my $self=shift();
+  my $tlefile=shift();
+  if (defined($tlefile)) {
+    $self->{'tle'}=GPS::SpaceTrack->new(filename=>$tlefile)
+      || die("Error: Cannot create GPS::SpaceTrack object.");
+  }
+  return $self->{'tle'};
 }
 
 =head2 get
@@ -66,17 +90,18 @@ Returns a Net::GPSD::Point object
 
 sub get {
   my $self=shift();
-  my $time=shift();
-  my $pt0=shift();
+  my $time=shift()||time;
+  my $pt0=shift()||undef();
 
   use Net::GPSD::Point;
-  my $point=Net::GPSD::Point->new();
+  my $point=Net::GPSD::Point->new($pt0);
   $point->tag("FAKE");
+  $point->time($time);
   $point->lat($self->lat);
   $point->lon($self->lon);
-  $point->speed(0);
-  $point->heading(0);
-  $point->alt(54.34);
+  $point->speed($self->speed);
+  $point->heading($self->heading);
+  $point->alt($self->alt);
   $point->mode(3);
 
   return $point;
@@ -86,13 +111,22 @@ sub get {
 
 Returns a list of Net::GPSD::Satellite objects
 
-  my @list=$obj->getsatellitelist;
+  my @list=$obj->getsatellitelist($point);
 
 =cut
 
 sub getsatellitelist {
-  use Net::GPSD::Satellite;
-  return (Net::GPSD::Satellite->new(split " ", "0 1 2 3 4"));
+  my $self=shift();
+  my $point=shift();
+  my $obj=$self->tle;
+  my $lat=$point->lat;
+  my $lon=$point->lon;
+  my $hae=$point->alt;
+  my $time=$point->time;
+  my @list=grep {$_->snr > 0} $obj->getsatellitelist({lat=>$lat, lon=>$lon,
+                                                      alt=>$hae, time=>$time});
+  pop @list until scalar(@list) <= 12;
+  return defined($obj) ? @list : undef();
 }
 
 sub lat {
@@ -117,6 +151,12 @@ sub heading {
   my $self = shift();
   if (@_) { $self->{'heading'} = shift() } #sets value
   return $self->{'heading'};
+}
+
+sub alt {
+  my $self = shift();
+  if (@_) { $self->{'alt'} = shift() } #sets value
+  return $self->{'alt'};
 }
 
 1;

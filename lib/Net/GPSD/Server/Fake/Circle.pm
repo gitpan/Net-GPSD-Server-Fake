@@ -11,13 +11,13 @@ Net::GPSD::Server::Fake::Circle - Provides a linear feed for the GPSD Daemon.
   use Net::GPSD::Server::Fake;
   use Net::GPSD::Server::Fake::Circle;
   my $server=Net::GPSD::Server::Fake->new();
-  my $circle=Net::GPSD::Server::Fake::Circle->new(lat=>38.865826,
+  my $provider=Net::GPSD::Server::Fake::Circle->new(lat=>38.865826,
                                                   lon=>-77.108574,
                                                   speed=>25,
                                                   heading=>45.3,
                                                   distance=>1000,
                                                   alpha=>0);
-  $server->start($circle);
+  $server->start($provider);
 
 =head1 DESCRIPTION
 
@@ -26,8 +26,9 @@ Net::GPSD::Server::Fake::Circle - Provides a linear feed for the GPSD Daemon.
 use strict;
 use vars qw($VERSION);
 use Geo::Functions qw{deg_rad};
+use GPS::SpaceTrack;
 
-$VERSION = sprintf("%d.%02d", q{Revision: 0.10} =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%02d", q{Revision: 0.14} =~ /(\d+)\.(\d+)/);
 
 =head1 CONSTRUCTOR
 
@@ -35,7 +36,7 @@ $VERSION = sprintf("%d.%02d", q{Revision: 0.10} =~ /(\d+)\.(\d+)/);
 
 Returns a new provider that can be passed to Net::GPSD::Server::Fake.
 
-  my $circle=Net::GPSD::Server::Fake::Circle->new();
+  my $provider=Net::GPSD::Server::Fake::Circle->new();
 
 =cut
 
@@ -61,6 +62,23 @@ sub initialize {
   $self->heading($param{'heading'}   ||  0     ); #degrees
   $self->distance($param{'distance'} ||  1000  ); #meters
   $self->alpha($param{'alpha'}       ||  0     ); #degrees
+  $self->tle($param{'tlefile'});
+}
+
+=head2 tle
+
+Method to set TLE file or retrieve the TLE object.
+
+=cut
+
+sub tle {
+  my $self=shift();
+  my $tlefile=shift();
+  if (defined($tlefile)) {
+    $self->{'tle'}=GPS::SpaceTrack->new(filename=>$tlefile)
+      || die("Error: Cannot create GPS::SpaceTrack object.");
+  }
+  return $self->{'tle'};
 }
 
 =head2 get
@@ -117,13 +135,22 @@ sub get {
 
 Returns a list of Net::GPSD::Satellite objects
 
-  my @list=$obj->getsatellitelist;
+  my @list=$obj->getsatellitelist($point);
 
 =cut
 
 sub getsatellitelist {
-  use Net::GPSD::Satellite;
-  return (Net::GPSD::Satellite->new(split " ", "0 1 2 3 4"));
+  my $self=shift();
+  my $point=shift();
+  my $obj=$self->tle;
+  my $lat=$point->lat;
+  my $lon=$point->lon;
+  my $hae=$point->alt;
+  my $time=$point->time;
+  my @list=grep {$_->snr > 0} $obj->getsatellitelist({lat=>$lat, lon=>$lon,
+                                                      alt=>$hae, time=>$time});
+  pop @list until scalar(@list) <= 12;
+  return defined($obj) ? @list : undef();
 }
 
 sub lat {

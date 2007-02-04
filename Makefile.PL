@@ -7,9 +7,9 @@ WriteMakefile(
                  vars                 => 0,
                  IO::Socket::INET     => 0,
                  Time::HiRes          => 0,
-                 Geo::Functions       => 0.03,
+                 Geo::Functions       => 0.05,
                  Geo::Forward         => 0.09,
-                 Net::GPSD::Point     => 0.30,
+                 Net::GPSD::Point     => 0.35,
                  Net::GPSD::Satellite => 0.30,
                },
                ($] >= 5.005 ? 

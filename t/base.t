@@ -6,7 +6,7 @@
 # Author: Michael R. Davis
 #
 
-=head1 Test Examples
+=head1 NAME
 
 base.t - Good examples concerning how to use this module
 
@@ -38,7 +38,7 @@ BEGIN {
     }
 }
 
-BEGIN { plan tests => 38 }
+BEGIN { plan tests => 20 }
 
 # just check that all modules can be compiled
 ok(eval {require Net::GPSD::Server::Fake; 1}, 1, $@);
@@ -59,15 +59,6 @@ ok($p1->lon, -77);
 ok($p1->speed, 25);
 ok($p1->heading, 45);
 
-my @s1=$track->getsatellitelist();
-my $s1=$s1[0];
-ok(ref $s1, "Net::GPSD::Satellite");
-ok($s1->prn, 0);
-ok($s1->elev, 1);
-ok($s1->azim, 2);
-ok($s1->snr, 3);
-ok($s1->used, 4);
-
 ok(eval {require Net::GPSD::Server::Fake::Stationary; 1}, 1, $@);
 my $stationary = Net::GPSD::Server::Fake::Stationary->new(lat=>38,lon=>-78);
 ok(ref $stationary, "Net::GPSD::Server::Fake::Stationary");
@@ -76,15 +67,6 @@ ok(ref $p2, "Net::GPSD::Point");
 ok($p2->lat, 38);
 ok($p2->lon, -78);
 ok($p2->speed, 0);
-
-my @s2=$stationary->getsatellitelist();
-my $s2=$s2[0];
-ok(ref $s2, "Net::GPSD::Satellite");
-ok($s2->prn, 0);
-ok($s2->elev, 1);
-ok($s2->azim, 2);
-ok($s2->snr, 3);
-ok($s2->used, 4);
 
 ok(eval {require Net::GPSD::Server::Fake::Circle; 1}, 1, $@);
 my $circle = Net::GPSD::Server::Fake::Circle->new(lat=>38,
@@ -98,12 +80,3 @@ my $p3=$circle->get();
 ok(ref $p3, "Net::GPSD::Point");
 near($p3->lat, 38.0064366217834);
 near($p3->lon, -77.9920334180003);
-
-my @s3=$circle->getsatellitelist();
-my $s3=$s3[0];
-ok(ref $s3, "Net::GPSD::Satellite");
-ok($s3->prn, 0);
-ok($s3->elev, 1);
-ok($s3->azim, 2);
-ok($s3->snr, 3);
-ok($s3->used, 4);
