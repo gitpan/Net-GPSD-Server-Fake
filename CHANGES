@@ -1,3 +1,7 @@
+2006-02-21 v0.15
+  * Added GPS::SpaceTrack requirement
+2006-02-04 v0.14
+  * Added minimal r support (now supports roadmap; but not gpsdrive?)
 2006-01-03 v0.13
   * Added extensions to example scripts
 2006-12-09 v0.12

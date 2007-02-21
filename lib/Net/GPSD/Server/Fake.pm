@@ -25,7 +25,7 @@ use IO::Socket::INET;
 use Time::HiRes qw{time};
 use Geo::Functions qw{dm_deg};
 
-$VERSION = sprintf("%d.%02d", q{Revision: 0.14} =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%02d", q{Revision: 0.15} =~ /(\d+)\.(\d+)/);
 
 =head1 CONSTRUCTOR
 

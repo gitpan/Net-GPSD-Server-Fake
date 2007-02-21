@@ -11,6 +11,7 @@ WriteMakefile(
                  Geo::Forward         => 0.09,
                  Net::GPSD::Point     => 0.35,
                  Net::GPSD::Satellite => 0.30,
+                 GPS::SpaceTrack      => 0.11,
                },
                ($] >= 5.005 ? 
                  (
