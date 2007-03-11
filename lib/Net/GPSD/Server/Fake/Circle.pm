@@ -11,12 +11,11 @@ Net::GPSD::Server::Fake::Circle - Provides a linear feed for the GPSD Daemon.
   use Net::GPSD::Server::Fake;
   use Net::GPSD::Server::Fake::Circle;
   my $server=Net::GPSD::Server::Fake->new();
-  my $provider=Net::GPSD::Server::Fake::Circle->new(lat=>38.865826,
-                                                  lon=>-77.108574,
-                                                  speed=>25,
-                                                  heading=>45.3,
-                                                  distance=>1000,
-                                                  alpha=>0);
+  my $provider=Net::GPSD::Server::Fake::Circle->new(lat=>38.865826, #center
+                                                    lon=>-77.108574,#center
+                                                    speed=>25,      #constant
+                                                    heading=>45.3,  #init
+                                                    distance=>1000);#constant
   $server->start($provider);
 
 =head1 DESCRIPTION
@@ -28,7 +27,7 @@ use vars qw($VERSION);
 use Geo::Functions qw{deg_rad};
 use GPS::SpaceTrack;
 
-$VERSION = sprintf("%d.%02d", q{Revision: 0.14} =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%02d", q{Revision: 0.16} =~ /(\d+)\.(\d+)/);
 
 =head1 CONSTRUCTOR
 
@@ -56,26 +55,24 @@ sub new {
 sub initialize {
   my $self = shift();
   my %param = @_;
-  $self->lat($param{'lat'}           ||  39.5  ); #degrees
-  $self->lon($param{'lon'}           || -77.5  ); #degrees
-  $self->speed($param{'speed'}       ||  20    ); #m/s
-  $self->heading($param{'heading'}   ||  0     ); #degrees
-  $self->distance($param{'distance'} ||  1000  ); #meters
-  $self->alpha($param{'alpha'}       ||  0     ); #degrees
-  $self->tle($param{'tlefile'});
+  $self->{'lat'}      = $param{'lat'}       ||  39.5  ; #degrees
+  $self->{'lon'}      = $param{'lon'}       || -77.5  ; #degrees
+  $self->{'speed'}    = $param{'speed'}     ||  20    ; #m/s
+  $self->{'heading'}  = $param{'heading'}   ||  0     ; #degrees
+  $self->{'distance'} = $param{'distance'}  ||  1000  ; #meters
+  $self->{'tlefile'}  = $param{'tlefile'};
 }
 
 =head2 tle
 
-Method to set TLE file or retrieve the TLE object.
+Method to create and retrieve the TLE object.
 
 =cut
 
 sub tle {
   my $self=shift();
-  my $tlefile=shift();
-  if (defined($tlefile)) {
-    $self->{'tle'}=GPS::SpaceTrack->new(filename=>$tlefile)
+  unless (defined($self->{'tle'})) {
+    $self->{'tle'}=GPS::SpaceTrack->new(filename=>$self->{'tlefile'})
       || die("Error: Cannot create GPS::SpaceTrack object.");
   }
   return $self->{'tle'};
@@ -97,10 +94,10 @@ sub get {
   use Geo::Forward;
   use Net::GPSD::Point;
   my $object = Geo::Forward->new();
-  my $lat=$self->lat;
-  my $lon=$self->lon;
-  my $speed=$self->speed;
-  my $dist=$self->distance;
+  my $lat=$self->{'lat'};
+  my $lon=$self->{'lon'};
+  my $speed=$self->{'speed'};
+  my $dist=$self->{'distance'};
   my $lasttime;
   my $da;
   my $alpha;
@@ -111,12 +108,13 @@ sub get {
     $alpha=$pt0->heading+90-$da;
   } else {
     $da=0;
-    $alpha=$self->alpha;
+    $alpha=$self->{'heading'}+90-$da;
     $lasttime=undef();
   }
   my $faz=$alpha;
   my ($lat1,$lon1,$baz) = $object->forward($lat,$lon,$faz,$dist);
   my $heading=$baz+90;
+  $heading-=360 if $heading>=360;
 
   my $point=Net::GPSD::Point->new();
   $point->tag("FAKE");
@@ -127,6 +125,7 @@ sub get {
   $point->speed($speed);
   $point->heading($heading);
   $point->mode(2);
+  $point->status(1);
 
   return $point;
 }
@@ -151,42 +150,6 @@ sub getsatellitelist {
                                                       alt=>$hae, time=>$time});
   pop @list until scalar(@list) <= 12;
   return defined($obj) ? @list : undef();
-}
-
-sub lat {
-  my $self = shift();
-  if (@_) { $self->{'lat'} = shift() } #sets value
-  return $self->{'lat'};
-}
-
-sub lon {
-  my $self = shift();
-  if (@_) { $self->{'lon'} = shift() } #sets value
-  return $self->{'lon'};
-}
-
-sub speed {
-  my $self = shift();
-  if (@_) { $self->{'speed'} = shift() } #sets value
-  return $self->{'speed'};
-}
-
-sub heading {
-  my $self = shift();
-  if (@_) { $self->{'heading'} = shift() } #sets value
-  return $self->{'heading'};
-}
-
-sub alpha {
-  my $self = shift();
-  if (@_) { $self->{'alpha'} = shift() } #sets value
-  return $self->{'alpha'};
-}
-
-sub distance {
-  my $self = shift();
-  if (@_) { $self->{'distance'} = shift() } #sets value
-  return $self->{'distance'};
 }
 
 1;

@@ -19,7 +19,7 @@ $filename="../gps.tle" if -r "../gps.tle";
 $filename="../../gps.tle" if -r "../../gps.tle";
 
 my $port=shift()||2947;
-my $server=Net::GPSD::Server::Fake->new(port=>$port)
+my $server=Net::GPSD::Server::Fake->new(port=>$port, version=>2.99, debug=>99)
                || die("Error: Cannot create server object.");
 
 my $provider=Net::GPSD::Server::Fake::Stationary->new(lat=>38.865826,

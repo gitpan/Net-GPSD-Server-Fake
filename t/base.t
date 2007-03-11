@@ -50,7 +50,10 @@ ok($server->port, "2947");
 ok($server->name, "GPSD");
 
 ok(eval {require Net::GPSD::Server::Fake::Track; 1}, 1, $@);
-my $track = Net::GPSD::Server::Fake::Track->new(lat=>39,lon=>-77,speed=>25,heading=>45);
+my $track = Net::GPSD::Server::Fake::Track->new(lat=>39,
+                                                lon=>-77,
+                                                speed=>25,
+                                                heading=>45);
 ok(ref $track, "Net::GPSD::Server::Fake::Track");
 my $p1=$track->get();
 ok(ref $p1, "Net::GPSD::Point");
@@ -73,8 +76,7 @@ my $circle = Net::GPSD::Server::Fake::Circle->new(lat=>38,
                                                   lon=>-78,
                                                   distance=>1000,
                                                   speed=>22.2,
-                                                  heading=>33.3,
-                                                  alpha=>44.4);
+                                                  heading=>33.3);
 ok(ref $circle, "Net::GPSD::Server::Fake::Circle");
 my $p3=$circle->get();
 ok(ref $p3, "Net::GPSD::Point");

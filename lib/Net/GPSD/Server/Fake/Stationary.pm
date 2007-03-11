@@ -28,7 +28,7 @@ use strict;
 use vars qw($VERSION);
 use GPS::SpaceTrack;
 
-$VERSION = sprintf("%d.%02d", q{Revision: 0.14} =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%02d", q{Revision: 0.16} =~ /(\d+)\.(\d+)/);
 
 =head1 CONSTRUCTOR
 
@@ -56,25 +56,24 @@ sub new {
 sub initialize {
   my $self = shift();
   my %param = @_;
-  $self->lat($param{'lat'}           ||  39.5);
-  $self->lon($param{'lon'}           || -77.5);
-  $self->speed($param{'speed'}       ||  0);
-  $self->heading($param{'heading'}   ||  0);
-  $self->alt($param{'alt'}           ||  0);
-  $self->tle($param{'tlefile'});
+  $self->{'lat'}     = $param{'lat'}       ||  39.5;
+  $self->{'lon'}     = $param{'lon'}       || -77.5;
+  $self->{'speed'}   = $param{'speed'}     ||  0;
+  $self->{'heading'} = $param{'heading'}   ||  0;
+  $self->{'alt'}     = $param{'alt'}       ||  0;
+  $self->{'tlefile'} = $param{'tlefile'};
 }
 
 =head2 tle
 
-Method to set TLE file or retrieve the TLE object.
+Method to create and retrieve the TLE object.
 
 =cut
 
 sub tle {
   my $self=shift();
-  my $tlefile=shift();
-  if (defined($tlefile)) {
-    $self->{'tle'}=GPS::SpaceTrack->new(filename=>$tlefile)
+  unless (defined($self->{'tle'})) {
+    $self->{'tle'}=GPS::SpaceTrack->new(filename=>$self->{'tlefile'})
       || die("Error: Cannot create GPS::SpaceTrack object.");
   }
   return $self->{'tle'};
@@ -97,12 +96,13 @@ sub get {
   my $point=Net::GPSD::Point->new($pt0);
   $point->tag("FAKE");
   $point->time($time);
-  $point->lat($self->lat);
-  $point->lon($self->lon);
-  $point->speed($self->speed);
-  $point->heading($self->heading);
-  $point->alt($self->alt);
+  $point->lat($self->{'lat'});
+  $point->lon($self->{'lon'});
+  $point->speed($self->{'speed'});
+  $point->heading($self->{'heading'});
+  $point->alt($self->{'alt'});
   $point->mode(3);
+  $point->status(1);
 
   return $point;
 }
@@ -127,36 +127,6 @@ sub getsatellitelist {
                                                       alt=>$hae, time=>$time});
   pop @list until scalar(@list) <= 12;
   return defined($obj) ? @list : undef();
-}
-
-sub lat {
-  my $self = shift();
-  if (@_) { $self->{'lat'} = shift() } #sets value
-  return $self->{'lat'};
-}
-
-sub lon {
-  my $self = shift();
-  if (@_) { $self->{'lon'} = shift() } #sets value
-  return $self->{'lon'};
-}
-
-sub speed {
-  my $self = shift();
-  if (@_) { $self->{'speed'} = shift() } #sets value
-  return $self->{'speed'};
-}
-
-sub heading {
-  my $self = shift();
-  if (@_) { $self->{'heading'} = shift() } #sets value
-  return $self->{'heading'};
-}
-
-sub alt {
-  my $self = shift();
-  if (@_) { $self->{'alt'} = shift() } #sets value
-  return $self->{'alt'};
 }
 
 1;

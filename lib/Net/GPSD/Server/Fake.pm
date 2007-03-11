@@ -25,7 +25,7 @@ use IO::Socket::INET;
 use Time::HiRes qw{time};
 use Geo::Functions qw{dm_deg};
 
-$VERSION = sprintf("%d.%02d", q{Revision: 0.15} =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%02d", q{Revision: 0.16} =~ /(\d+)\.(\d+)/);
 
 =head1 CONSTRUCTOR
 
@@ -33,7 +33,11 @@ $VERSION = sprintf("%d.%02d", q{Revision: 0.15} =~ /(\d+)\.(\d+)/);
 
 Returns a new server
 
-  my $server=Net::GPSD::Server::Fake->new();
+  my $server=Net::GPSD::Server::Fake->new(
+               port=>'2947',
+               name=>'GPSD',
+               version=>Net::GPSD::Server::Fake->VERSION,
+               debug=>1); 0=>none, 2=>default, 2+=>verbose
 
 =cut
 
@@ -53,8 +57,10 @@ sub new {
 sub initialize {
   my $self = shift();
   my %param = @_;
-  $self->{'port'}=($param{'port'} || '2947');
-  $self->name($param{'name'} || 'GPSD');
+  $self->{'port'}    = $param{'port'}    || '2947';
+  $self->{'version'} = $param{'version'} || $VERSION;
+  $self->{'name'}    = $param{'name'}    || 'GPSD';
+  $self->{'debug'}   = defined($param{'debug'}) ? $param{'debug'} : 2;
 }
 
 =head2 start
@@ -75,6 +81,7 @@ sub start {
                                             Reuse=>1);
 
   die "Can't create a listening socket: $@" unless $listen_socket;
+  print "Debug Level: ", $self->{'debug'}, "\n" if ($self->{'debug'} > 2);
 
   while ($listen_socket->opened and my $connection=$listen_socket->accept) {
     my $child;
@@ -92,30 +99,40 @@ sub start {
       my $sockport=$connection->sockport;
       my $peerhost=$connection->peerhost;
       my $peerport=$connection->peerport;
-      print "Connected: ", $sockhost, ":", $sockport, " -> ", $peerhost,":",$peerport, "\n";
+      print "Connected: ", $sockhost, ":", $sockport, " -> ", $peerhost,":",$peerport, "\n" if ($self->{'debug'} > 0);
       while (defined($_=$connection->getline)) {
         chomp;
-        print "Command: ", $connection->peerhost,":",$connection->peerport, " -> ",$_;
+        print "Command: ", $connection->peerhost,":",$connection->peerport, " -> ",$_ if ($self->{'debug'} > 1);
         next unless m/\S/;       # blank line
         my @output=($name);
         $point=$provider->get(time, $point);
         my @list=parseline($_);
         foreach (@list) {
-          print " => $_";
+          print " => $_" if ($self->{'debug'} > 2);
           if (m/l/i) {
-            push @output, "L=0 $VERSION ailopwxy ".ref($self);
+            push @output, "L=0 ".$self->version." ailopstvwxy ".ref($self);
           } elsif (m/a/i) {
-            push @output, "A=".u2q(defined($point) ? $point->alt : '?');
+            push @output, "A=".u2q($point->alt);
+            print ", A=".u2q($point->alt) if ($self->{'debug'} > 3);
+          } elsif (m/v/i) {
+            push @output, "V=".u2q($point->speed_knots);
+            print ", V=".u2q($point->speed_knots) if ($self->{'debug'} > 3);
+          } elsif (m/t/i) {
+            push @output, "T=".u2q($point->heading);
+            print ", T=".u2q($point->heading) if ($self->{'debug'} > 3);
+          } elsif (m/s/i) {
+            push @output, "S=".u2q($point->status);
+            print ", S=".u2q($point->status) if ($self->{'debug'} > 3);
           } elsif (m/x/i) {
             push @output, "X=". $point->time||0;
           } elsif (m/i/i) {
             push @output, "I=".u2q(ref($provider));
           } elsif (m/m/i) {
-            push @output, "M=".u2q(defined($point) ? $point->mode : '?');
+            push @output, "M=".u2q($point->mode);
           } elsif (m/p/i) {
             push @output, "P=".join(" ", 
-                                 u2q(defined($point) ? $point->lat : '?'),
-                                 u2q(defined($point) ? $point->lon : '?')
+                                 u2q($point->lat),
+                                 u2q($point->lon)
                                );
           } elsif (m/o/i) {
             push @output, $self->line_o($provider, $point);
@@ -126,7 +143,7 @@ sub start {
             push @output, "W=$w";
             if ($w) {
               $pid_watcher=$self->start_watcher($connection, $provider);
-              print " => PID: $pid_watcher";
+              print " => PID: $pid_watcher" if ($self->{'debug'} > 2);
             } else {
               $self->stop_child($pid_watcher);
             }
@@ -135,7 +152,7 @@ sub start {
             push @output, "R=$r";
             if ($r) {
               $pid_rmode=$self->start_rmode($connection, $provider);
-              print " => PID: $pid_rmode";
+              print " => PID: $pid_rmode" if ($self->{'debug'} > 2);
             } else {
               $self->stop_child($pid_rmode);
             }
@@ -143,9 +160,9 @@ sub start {
           }
         } #end of foreach
         print $connection join(",", @output), "\n";
-        print "\n";
+        print "\n" if ($self->{'debug'} > 0);
       } #end of while
-      print "Disconnected: ", $sockhost, ":", $sockport, " -> ", $peerhost,":",$peerport, "\n";
+      print "Disconnected: ", $sockhost, ":", $sockport, " -> ", $peerhost,":",$peerport, "\n" if ($self->{'debug'} > 0);
     } else { #i'm the parent
       $connection->close();
     }
@@ -170,6 +187,7 @@ sub start_watcher {
   if ($pid) {
     return $pid;
   } else {
+    print ", starting watcher" if ($self->{'debug'} > 4);
     $self->watcher($fh, $provider);
   }
 }
@@ -190,6 +208,7 @@ sub start_rmode {
 sub stop_child {
   my $self=shift();
   my $pid=shift();
+  print ", killing watcher" if ($self->{'debug'} > 4);
   kill "HUP", $pid;
 }
 
@@ -317,6 +336,20 @@ Returns the current TCP port.
 sub port {
   my $self = shift();
   return $self->{'port'};
+}
+
+=head2 version
+
+Returns the version that the GPSD deamon reports in the L command.  This default to the version of the Net::GPSD::Server::Fake->VERSION package.
+
+  my $obj=Net$obj->version;
+  my $version=$obj->version;
+
+=cut
+
+sub version {
+  my $self = shift();
+  return $self->{'version'};
 }
 
 sub u2q {

@@ -1,3 +1,7 @@
+2006-03-11 v0.16
+  * Fixed Track.pm (negative delta time)
+  * Added more commands to support Roadnav http://roadnav.sourceforge.net/
+  * Added debug option for Fake.pm new method
 2006-02-21 v0.15
   * Added GPS::SpaceTrack requirement
 2006-02-04 v0.14

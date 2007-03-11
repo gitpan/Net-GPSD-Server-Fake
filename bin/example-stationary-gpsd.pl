@@ -27,7 +27,7 @@ my $obj=Net::GPSD->new(host=>$host, port=>$port);
 my $point=$obj->get;
 
 print "Local Port: $lport\n";
-my $server=Net::GPSD::Server::Fake->new(port=>$lport)
+my $server=Net::GPSD::Server::Fake->new(port=>$lport, version=>2.99)
                || die("Error: Cannot create server object.");
 
 my $provider=Net::GPSD::Server::Fake::Stationary->new(lat=>$point->lat,
